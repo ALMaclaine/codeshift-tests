@@ -4,14 +4,10 @@ Running in dry mode, no files will be written!
 Sending 1 files to free worker...
 import { EnderButton } from 'components/utils/ender-button-v2.jsx';
 import { EnderModal } from 'components/utils/ender-modal.jsx';
-import { useState, lazy, useTest } from 'react';
+import { lazy, useState } from 'react';
 import { emptyFn } from 'utils.mjs';
 
 const CreateReceipt = lazy(() =>
-  import('accounting/check-receipts/create-receipt.jsx')
-);
-
-const CreateReceipt2 = useTest(() =>
   import('accounting/check-receipts/create-receipt.jsx')
 );
 
@@ -40,4 +36,4 @@ Results:
 0 unmodified
 0 skipped
 1 ok
-Time elapsed: 1.006seconds 
+Time elapsed: 1.188seconds 

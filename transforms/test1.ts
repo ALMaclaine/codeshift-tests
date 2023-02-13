@@ -1,113 +1,70 @@
 import { JSCodeshift } from 'jscodeshift';
+import {
+  getDefaultImportByIdentifier,
+  getImportBySourceName,
+  getMemberExpressionsByName,
+  specifierComparator,
+} from './utils';
 
-// export default function (file, { jscodeshift: j }: JSCodeshift, options) {
-//     const source = j(file.source);
-//
-//     const imports = source.find(j.ImportDeclaration).filter((path) => path.node.source.value === "react");
-//     const hasImportNamespaceReactSpecifier = imports.find(j.ImportNamespaceSpecifier).length > 0;
-//
-//     if (hasImportNamespaceReactSpecifier) {
-//         return source.toSource();
-//     }
-//
-//     const hasImportDefaultSpecifier = imports.find(j.ImportDefaultSpecifier).length > 0;
-//
-//     if (hasImportDefaultSpecifier) {
-//         const newImport = j.importDeclaration(
-//             [j.importNamespaceSpecifier(j.identifier("React"))],
-//             j.stringLiteral("react")
-//         );
-//         source.get().node.program.body.unshift(newImport);
-//         imports.find(j.ImportDefaultSpecifier).remove();
-//     }
-//
-//     return source.toSource();
-// }
-
-export default function (file, { jscodeshift: j }: JSCodeshift, options) {
+export default function (file, { jscodeshift: j }: JSCodeshift) {
   const source = j(file.source);
-  //
-  // // console.log( source.find);
-  // const calls = source.find(j.MemberExpression).filter((node) => {
-  //   const isReact = node.value.object.name === 'React';
-  //   return isReact;
-  // });
-  //
-  // if (calls.length) {
-  //   const identifiers = calls.nodes().map((node) => node.property.name);
-  //   identifiers.map((identifier) => {
-  //     const collection = source.find(j.MemberExpression, {
-  //       object: {
-  //         name: 'React',
-  //       },
-  //       property: {
-  //         name: 'circleArea',
-  //       },
-  //     });
-  //     const instance = collection.filter((node) => {
-  //       return node.value.property.name === identifier;
-  //     });
-  //
-  //     instance.replaceWith(instance.get(0));
-  //     console.log(instance);
-  //   });
-  //
-  //   // calls.forEach((node) => {
-  //   //   console.log(node, node.replaceWith);
-  //   // });
-  //   // const imports = source
-  //   //   .find(j.ImportDeclaration)
-  //   //   .filter((path) => path.node.source.value === 'react');
-  //   //
-  //   // imports.find(j.ImportDefaultSpecifier).remove();
-  //   // imports.forEach((node) => {
-  //   //   console.log(node.value.specifiers);
-  //   // });
-  // }
 
-  source
-    .find(j.ImportDefaultSpecifier)
-    .filter((path) => {
-      return path.value.local.name === 'React';
-    })
-    .remove();
+  // remove all instances of React default imports
+  // from: import React, { useState } from 'react'
+  // to:   import { useState } from 'react'
+  //
+  // from: import React from 'react'
+  // to:   <gone>
+  getDefaultImportByIdentifier(source, j, 'React').remove();
 
-  // imports.find(j.ImportDefaultSpecifier).remove();
+  // find all usages of React.property
+  // example: find all instances of React.lazy or React.useRef
+  const reactDefaultUses = getMemberExpressionsByName(source, j, 'React');
 
-  const reactDefaultUses = source.find(j.MemberExpression, {
-    object: {
-      name: 'React',
-    },
-  });
-
+  // This replaces instances of React.property with property
+  // example: React.lazy(..) -> lazy(..)
   reactDefaultUses.replaceWith((node) => {
     return node.value.property;
   });
 
+  // Get the names of the identifiers used from React
+  // ie ['lazy', 'useRef']
   const identifiers = Array.from(
     new Set(reactDefaultUses.nodes().map((node) => node.name))
   );
 
-  const reactImports = source
-    .find(j.ImportDeclaration)
-    .filter((path) => path.node.source.value === 'react');
+  // the below logic assumes there is only one react import per file
 
+  // find all import statements sourced from react, should only be 1 per file
+  // import React, { useRef, useState } from 'react' <---- finds this
+  const reactImports = getImportBySourceName(source, j, 'react');
+
+  // create the import specifier
+  // this means create an individual named import such as: { useEffect }
+  // { useState, useRef } is an array of import specifiers
   const importSpecifiers = identifiers.map((id) =>
     j.importSpecifier(j.identifier(id))
   );
 
-  reactImports.forEach((reactImport) =>
+  // take the import line we find and replace it with a new
+  // one we create with all the imports we need
+  reactImports.forEach((reactImport) => {
+    const newSpecifiers = [...reactImport.node.specifiers, ...importSpecifiers];
+    newSpecifiers.sort(specifierComparator);
     // Replace the existing node with a new one
     j(reactImport).replaceWith(
       // Build a new import declaration node based on the existing one
       j.importDeclaration(
-        [...reactImport.node.specifiers, ...importSpecifiers], // Insert our new import specificer
+        newSpecifiers, // Insert our new import specificer
         reactImport.node.source
       )
-    )
-  );
+    );
+  });
 
-  // reactDefaultUses.forEach(console.log);
+  // if the above process removed all specifiers from 'react' import, then delete the import
+  reactImports.filter((node) => node.value.specifiers.length === 0).remove();
 
   return source.toSource();
 }
+
+export const parser = 'tsx';
