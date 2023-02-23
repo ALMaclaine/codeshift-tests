@@ -12,6 +12,16 @@ const getDefaultImportByIdentifier = (
   });
 };
 
+const findJsxElementType = (source: unknown, j: JSCodeshift, name: string) => {
+  return source.find(j.JSXOpeningElement).filter((path) => {
+    return path.value.name.name === name;
+  });
+};
+
+const getJsxOpeningElementAttributes = (j: JSCodeshift, coll: unknown) => {
+  return coll.find(j.JSXAttribute);
+};
+
 const getMemberExpressionsByName = (
   source: unknown,
   j: JSCodeshift,
@@ -48,4 +58,6 @@ export {
   getMemberExpressionsByName,
   getImportBySourceName,
   specifierComparator,
+  findJsxElementType,
+  getJsxOpeningElementAttributes,
 };

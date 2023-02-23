@@ -12,7 +12,11 @@ export function AddCheckButton({ onSuccess = emptyFn }) {
 
   return (
     <div className="flex-justify">
-      <EnderModal onClose={() => setIsModalOpen(false)} opened={isModalOpen}>
+      <EnderModal
+        onClick={() => {}}
+        onClose={() => setIsModalOpen(false)}
+        opened={isModalOpen}
+      >
         <CreateReceipt
           onSuccess={(keepModalOpen) => {
             setIsModalOpen(keepModalOpen);
@@ -21,7 +25,32 @@ export function AddCheckButton({ onSuccess = emptyFn }) {
           title={'Mark Check as Received'}
         />
       </EnderModal>
-      <EnderButton onClick={() => setIsModalOpen(true)}>Add Check</EnderButton>
+      <EnderModal
+        onClick={() => {}}
+        shouldClose
+        onClose={() => setIsModalOpen(false)}
+        opened={isModalOpen}
+      >
+        <CreateReceipt
+          onSuccess={(keepModalOpen) => {
+            setIsModalOpen(keepModalOpen);
+            onSuccess();
+          }}
+          title={'Mark Check as Received'}
+        />
+      </EnderModal>
+      <EnderModal onClick={() => {}} onClose={() => setIsModalOpen(false)}>
+        <CreateReceipt
+          onSuccess={(keepModalOpen) => {
+            setIsModalOpen(keepModalOpen);
+            onSuccess();
+          }}
+          title={'Mark Check as Received'}
+        />
+      </EnderModal>
+      <EnderButton onClick={() => {}} onClick={() => setIsModalOpen(true)}>
+        Add Check
+      </EnderButton>
     </div>
   );
 }
